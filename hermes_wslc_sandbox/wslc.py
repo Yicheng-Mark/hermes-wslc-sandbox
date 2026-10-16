@@ -20,6 +20,7 @@ instead of being permanently pinned to today's limitation.
 from __future__ import annotations
 
 import json
+import locale
 import logging
 import os
 import shutil
@@ -53,8 +54,24 @@ class WslcError(RuntimeError):
 
 
 def _decode(data: bytes) -> str:
-    """Localized CLI text arrives in the console codepage; flags and JSON are ASCII."""
-    for encoding in ("utf-8", "mbcs", "cp1252"):
+    """Decode CLI output without ever raising.
+
+    Machine-readable output is ASCII (flags, JSON), so UTF-8 is tried first and is correct
+    for anything a modern CLI emits. Localized messages copy the Windows console codepage —
+    cp936 on a Chinese install, cp1252 on an English one — so the platform's preferred
+    encoding is the second candidate. There is no way to identify an unknown encoding with
+    certainty; the contract here is only that a byte stream always yields a string (badly
+    decoded prose is acceptable, a crashed read is not).
+    """
+    candidates = ["utf-8"]
+    try:
+        preferred = locale.getpreferredencoding(False)
+    except Exception:
+        preferred = ""
+    if preferred:
+        candidates.append(preferred)
+    candidates.append("cp1252")
+    for encoding in candidates:
         try:
             return data.decode(encoding)
         except (UnicodeDecodeError, LookupError):

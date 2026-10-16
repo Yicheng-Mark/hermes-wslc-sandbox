@@ -68,12 +68,19 @@ INSPECT_ARRAY = json.dumps([{
 
 
 def _fake_cli(tmp_path: Path, stdout: str = "", stderr: str = "", code: int = 0) -> str:
-    """An executable that prints canned output, so argv handling is testable everywhere."""
+    """An executable that prints canned output, so argv handling is testable everywhere.
+
+    The canned text is written to the raw byte streams as UTF-8, which is what a real CLI
+    does. Writing through ``sys.stdout`` would encode with the *console* codepage instead, so
+    a localized fixture would crash on an English Windows runner (cp1252) while passing on a
+    Chinese one (cp936) — and the point of these fixtures is to be the same everywhere.
+    """
     script = tmp_path / "fake_wslc.py"
     script.write_text(
         "import sys\n"
-        f"sys.stdout.write({stdout!r})\n"
-        f"sys.stderr.write({stderr!r})\n"
+        f"sys.stdout.buffer.write({stdout.encode('utf-8')!r})\n"
+        f"sys.stderr.buffer.write({stderr.encode('utf-8')!r})\n"
+        "sys.stdout.flush()\n"
         f"sys.exit({code})\n",
         encoding="utf-8")
     if sys.platform == "win32":
@@ -84,6 +91,19 @@ def _fake_cli(tmp_path: Path, stdout: str = "", stderr: str = "", code: int = 0)
     launcher.write_text(f'#!/bin/sh\nexec "{sys.executable}" "{script}" "$@"\n', encoding="utf-8")
     launcher.chmod(0o755)
     return str(launcher)
+
+
+# --- output decoding ---------------------------------------------------------
+
+def test_decode_reads_utf8_cli_output():
+    assert wslc._decode("正在检查更新".encode("utf-8")) == "正在检查更新"
+
+
+def test_decode_never_raises_on_arbitrary_bytes():
+    """Prose from a CLI is not always decodable — a truncated multi-byte character, a
+    console-codepage byte. Reading it must still return a string rather than crash the read."""
+    for payload in (b"\xff\xfe\x00\x81", b"\x8d\x90\x9d", "正在检查更新".encode("cp936")[:4]):
+        assert isinstance(wslc._decode(payload), str)
 
 
 # --- binary resolution -------------------------------------------------------

@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hermes-wslc-sandbox"
+version = "0.1.0"
+description = "WSL Containers (wslc) terminal backend for Hermes Agent"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+requires-python = ">=3.11"
+dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/Yicheng-Mark/hermes-wslc-sandbox"
+Issues = "https://github.com/Yicheng-Mark/hermes-wslc-sandbox/issues"
+
+[project.optional-dependencies]
+test = ["pytest>=8,<10"]
+
+[tool.setuptools.packages.find]
+include = ["hermes_wslc_sandbox*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+markers = [
+    "live: needs a real wslc CLI and a local Linux image (set HERMES_WSLC_LIVE=1)",
+]

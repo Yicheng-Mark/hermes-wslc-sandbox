@@ -1,0 +1,39 @@
+name: tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  unit:
+    # The unit tests are deliberately Hermes-free and wslc-free, so they run anywhere the
+    # plugin's Python floor does — including the platform this backend targets.
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python-version: ["3.11", "3.13"]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: python -m pip install "pytest>=8,<10"
+      - run: python -m pytest tests/test_wslc_cli.py tests/test_config.py -q
+
+  live:
+    # Needs a Windows runner with WSL Containers installed and an image already pulled;
+    # not available on hosted runners, so it is opt-in here rather than silently skipped.
+    if: ${{ vars.HERMES_WSLC_LIVE_CI == '1' }}
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: python -m pip install "pytest>=8,<10"
+      - run: python -m pytest tests/test_live_wslc.py -q
+        env:
+          HERMES_WSLC_LIVE: "1"
+          HERMES_WSLC_TEST_IMAGE: ${{ vars.HERMES_WSLC_TEST_IMAGE }}

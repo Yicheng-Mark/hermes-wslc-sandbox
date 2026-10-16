@@ -1,0 +1,6 @@
+name: hermes-wslc-sandbox
+version: 0.1.0
+description: "Run Hermes terminal tools in Microsoft's WSL Containers (wslc) runtime on Windows: a Linux container sandbox for users who run WSL Containers instead of Docker Desktop."
+author: Yicheng-Mark
+kind: backend
+requires_hermes: ">=0.20.6"
